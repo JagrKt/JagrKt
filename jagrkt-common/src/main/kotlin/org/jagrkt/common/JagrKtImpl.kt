@@ -21,6 +21,7 @@ package org.jagrkt.common
 
 import com.google.inject.Inject
 import kotlinx.coroutines.runBlocking
+import org.jagrkt.api.rubric.GradedRubric
 import org.jagrkt.api.testing.Submission
 import org.jagrkt.common.compiler.java.CompiledClass
 import org.jagrkt.common.compiler.java.RuntimeJarLoader
@@ -34,6 +35,7 @@ import org.jagrkt.common.testing.TestJar
 import org.jagrkt.common.transformer.TransformerManager
 import org.slf4j.Logger
 import java.io.File
+import java.util.concurrent.ConcurrentLinkedQueue
 
 class JagrKtImpl @Inject constructor(
   private val config: Config,
@@ -108,23 +110,64 @@ class JagrKtImpl @Inject constructor(
     val executor = with(config.grading) {
       WaterfallExecutor(concurrentThreads, -1L, logger)
     }
+    val allRubrics = ConcurrentLinkedQueue<GradedRubric>()
     submissions.forEach { submission ->
       executor.schedule(submission.info.toString()) {
-        handleSubmission(submission, testJars, rubricExportLocation)
+        handleSubmission(allRubrics, submission, testJars, rubricExportLocation)
       }
     }
     runBlocking {
       executor.execute()
     }
+    val histo = mutableMapOf<Int, Int>()
+    var correctPoints = 0
+    var incorrectPoints = 0
+    var maxPoints = 0
+    for (rubric in allRubrics) {
+      val prev = histo.computeIfAbsent(rubric.grade.correctPoints) { 0 }
+      histo[rubric.grade.correctPoints] = prev + 1
+      correctPoints += rubric.grade.correctPoints
+      incorrectPoints += rubric.grade.incorrectPoints
+      maxPoints += rubric.rubric.maxPoints
+    }
+    if (allRubrics.isNotEmpty()) {
+      logger.info(
+        "Result: Correct: $correctPoints, Incorrect: $incorrectPoints, Max: $maxPoints, Average: " +
+          "${correctPoints.toDouble() / allRubrics.size.toDouble()}, Rubrics: ${allRubrics.size}"
+      )
+      for ((points, count) in histo.toSortedMap()) {
+        StringBuilder().apply {
+          append("Points: ")
+          append(points.toString().padStart(length = 3))
+          append(" Nr: ")
+          append(count.toString().padStart(length = 3))
+          append(" |")
+          for (i in 0 until count) {
+            append('-')
+          }
+        }.also { println(it) }
+      }
+    } else {
+      logger.info(
+        "Zero rubrics"
+      )
+    }
+    println("Individual timeout: ${config.transformers.timeout.individualTimeout}")
   }
 
-  private fun handleSubmission(submission: Submission, testJars: List<TestJar>, rubricExportLocation: File) {
+  private fun handleSubmission(
+    allRubrics: MutableCollection<GradedRubric>,
+    submission: Submission,
+    testJars: List<TestJar>,
+    rubricExportLocation: File,
+  ) {
     val gradedRubrics = runtimeGrader.grade(testJars, submission)
     if (gradedRubrics.isEmpty()) {
       logger.warn("$submission :: No matching rubrics!")
       return
     }
     for ((gradedRubric, exportFileName) in gradedRubrics) {
+      allRubrics += gradedRubric
       gradedRubricExportManager.export(gradedRubric, rubricExportLocation, exportFileName)
     }
   }
