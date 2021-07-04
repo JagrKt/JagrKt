@@ -102,8 +102,7 @@ class WaterfallExecutor(
   private data class ScheduledTask(
     val name: String,
     val block: () -> Unit,
-  ) {
-  }
+  )
 
   private data class RunningTask(
     val name: String,

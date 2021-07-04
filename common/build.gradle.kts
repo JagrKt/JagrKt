@@ -14,7 +14,6 @@ repositories {
 dependencies {
   api(project(":jagrkt-launcher"))
   api(project(":jagrkt-plugin-api"))
-  implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.3")
   implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinxSerializationVersion")
   implementation("org.jetbrains.kotlinx:kotlinx-serialization-core-jvm:$kotlinxSerializationVersion")
   implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:$kotlinxSerializationVersion")
