@@ -25,10 +25,10 @@ import org.sourcegrade.jagr.api.testing.Submission
 import org.sourcegrade.jagr.api.testing.SubmissionInfo
 import org.sourcegrade.jagr.core.compiler.java.CompiledClass
 import org.sourcegrade.jagr.core.compiler.java.JavaSourceFile
-import java.io.File
+import org.sourcegrade.jagr.launcher.io.ResourceContainer
 
 data class JavaSubmission(
-  val file: File,
+  val resourceContainer: ResourceContainer,
   private val info: SubmissionInfo,
   private val compileResult: CompileResult,
   val compiledClasses: Map<String, CompiledClass>,
@@ -37,5 +37,5 @@ data class JavaSubmission(
   override fun getInfo(): SubmissionInfo = info
   override fun getCompileResult(): CompileResult = compileResult
   override fun getSourceFile(fileName: String): SourceFile? = sourceFiles[fileName]
-  override fun toString(): String = "$info(${file.name})"
+  override fun toString(): String = "$info(${resourceContainer.name})"
 }

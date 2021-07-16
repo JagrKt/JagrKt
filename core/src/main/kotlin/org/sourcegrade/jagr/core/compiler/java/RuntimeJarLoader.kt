@@ -26,13 +26,11 @@ import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Opcodes
 import org.slf4j.Logger
-import org.sourcegrade.jagr.api.testing.CompileResult
 import org.sourcegrade.jagr.core.compiler.readEncoded
 import org.sourcegrade.jagr.core.testing.SubmissionInfoImpl
-import java.io.File
+import org.sourcegrade.jagr.launcher.io.ResourceContainer
 import java.nio.charset.StandardCharsets
 import java.util.Locale
-import java.util.jar.JarFile
 import javax.tools.Diagnostic
 import javax.tools.DiagnosticCollector
 import javax.tools.JavaFileObject
@@ -42,53 +40,49 @@ class RuntimeJarLoader @Inject constructor(
   private val logger: Logger,
 ) {
 
-  fun loadCompiledJar(file: File): Map<String, CompiledClass> {
-    val jarFile = JarFile(file)
+  fun loadCompiledJar(container: ResourceContainer): Map<String, CompiledClass> {
     val classStorage: MutableMap<String, CompiledClass> = mutableMapOf()
-    for (entry in jarFile.entries()) {
+    for (resource in container) {
       when {
-        entry.isDirectory -> continue
-        entry.name.endsWith(".class") -> {
-          val className = entry.name.replace('/', '.').substring(0, entry.name.length - 6)
-          classStorage[className] = CompiledClass.Existing(className, jarFile.getInputStream(entry).use { it.readBytes() })
+        resource.name.endsWith(".class") -> {
+          val className = resource.name.replace('/', '.').substring(0, resource.name.length - 6)
+          classStorage[className] = CompiledClass.Existing(className, resource.inputStream.use { it.readBytes() })
         }
-        entry.name.endsWith("MANIFEST.MF") -> { // ignore
+        resource.name.endsWith("MANIFEST.MF") -> { // ignore
         }
-        else -> logger.warn("$file jar entry $entry is not a java class file!")
+        else -> logger.warn("$container resource ${resource.name} is not a java class file!")
       }
     }
     return classStorage
   }
 
-  fun loadSourcesJar(file: File, runtimeClassPath: Map<String, CompiledClass> = mapOf()): CompileJarResult {
-    val jarFile = JarFile(file)
+  fun loadSourcesJar(container: ResourceContainer, runtimeClassPath: Map<String, CompiledClass> = mapOf()): JavaCompileResult {
     val sourceFiles: MutableMap<String, JavaSourceFile> = mutableMapOf()
     var submissionInfo: SubmissionInfoImpl? = null
-    for (entry in jarFile.entries()) {
+    for (resource in container) {
       when {
-        entry.isDirectory -> continue
-        entry.name == "submission-info.json" -> {
+        resource.name == "submission-info.json" -> {
           submissionInfo = try {
-            Json.decodeFromString<SubmissionInfoImpl>(jarFile.getInputStream(entry).bufferedReader().use { it.readText() })
+            Json.decodeFromString<SubmissionInfoImpl>(resource.inputStream.bufferedReader().use { it.readText() })
           } catch (e: Throwable) {
-            logger.error("$file has invalid submission-info.json", e)
-            return CompileJarResult(file)
+            logger.error("$resource has invalid submission-info.json", e)
+            return JavaCompileResult(container)
           }
         }
-        entry.name.endsWith(".java") -> {
-          val className = entry.name.replace('/', '.').substring(0, entry.name.length - 5)
-          val content = jarFile.getInputStream(entry).use { it.readEncoded() }
-          val sourceFile = JavaSourceFile(className, entry.name, content)
-          sourceFiles[entry.name] = sourceFile
+        resource.name.endsWith(".java") -> {
+          val className = resource.name.replace('/', '.').substring(0, resource.name.length - 5)
+          val content = resource.inputStream.use { it.readEncoded() }
+          val sourceFile = JavaSourceFile(className, resource.name, content)
+          sourceFiles[resource.name] = sourceFile
         }
-        entry.name.endsWith("MANIFEST.MF") -> { // ignore
+        resource.name.endsWith("MANIFEST.MF") -> { // ignore
         }
-        else -> logger.warn("$file jar entry $entry is not a java source file!")
+        else -> logger.warn("$container resource ${resource.name} is not a java source file!")
       }
     }
     if (sourceFiles.isEmpty()) {
       // no source files, skip compilation task
-      return CompileJarResult(file, submissionInfo)
+      return JavaCompileResult(container, submissionInfo)
     }
     val compiledClasses: MutableMap<String, CompiledClass> = mutableMapOf()
     val collector = DiagnosticCollector<JavaFileObject>()
@@ -117,9 +111,9 @@ class RuntimeJarLoader @Inject constructor(
         }
         messages += "${diag.source.name}:${diag.lineNumber} ${diag.kind} :: ${diag.getMessage(Locale.getDefault())}"
       }
-      return CompileJarResult(file, submissionInfo, compiledClasses, sourceFiles, messages, warnings, errors, other)
+      return JavaCompileResult(container, submissionInfo, compiledClasses, sourceFiles, messages, warnings, errors, other)
     }
-    return CompileJarResult(file, submissionInfo, compiledClasses, sourceFiles)
+    return JavaCompileResult(container, submissionInfo, compiledClasses, sourceFiles)
   }
 
   private fun Map<String, CompiledClass>.linkSource(sourceFiles: Map<String, JavaSourceFile>) {
@@ -142,58 +136,5 @@ class RuntimeJarLoader @Inject constructor(
         }, ClassReader.SKIP_CODE)
       }
     }
-  }
-
-  data class CompileJarResult(
-    val file: File,
-    val submissionInfo: SubmissionInfoImpl? = null,
-    val compiledClasses: Map<String, CompiledClass> = mapOf(),
-    val sourceFiles: Map<String, JavaSourceFile> = mapOf(),
-    private val messages: List<String> = listOf(),
-    val warnings: Int = 0,
-    val errors: Int = 0,
-    val other: Int = 0,
-  ) : CompileResult {
-    override fun getMessages(): List<String> = messages
-    override fun getWarningCount(): Int = warnings
-    override fun getErrorCount(): Int = errors
-    override fun getOtherCount(): Int = other
-
-    fun printMessages(logger: Logger, lazyError: () -> String, lazyWarning: () -> String) {
-      when {
-        errors > 0 -> {
-          logger.error(lazyError())
-          for (message in messages) {
-            logger.error(message)
-          }
-        }
-        warnings > 0 -> {
-          logger.warn(lazyWarning())
-          for (message in messages) {
-            logger.warn(message)
-          }
-        }
-      }
-    }
-
-    fun copyWith(
-      file: File? = null,
-      submissionInfo: SubmissionInfoImpl? = null,
-      compiledClasses: Map<String, CompiledClass>? = null,
-      sourceFiles: Map<String, JavaSourceFile>? = null,
-      messages: List<String>? = null,
-      warnings: Int? = null,
-      errors: Int? = null,
-      other: Int? = null,
-    ) = CompileJarResult(
-      file ?: this.file,
-      submissionInfo ?: this.submissionInfo,
-      compiledClasses ?: this.compiledClasses,
-      sourceFiles ?: this.sourceFiles,
-      messages ?: this.messages,
-      warnings ?: this.warnings,
-      errors ?: this.errors,
-      other ?: this.other,
-    )
   }
 }

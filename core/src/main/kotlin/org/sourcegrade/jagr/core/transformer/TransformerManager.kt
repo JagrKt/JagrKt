@@ -21,7 +21,7 @@ package org.sourcegrade.jagr.core.transformer
 
 import com.google.inject.Inject
 import org.sourcegrade.jagr.core.compiler.java.CompiledClass
-import org.sourcegrade.jagr.core.compiler.java.RuntimeJarLoader
+import org.sourcegrade.jagr.core.compiler.java.JavaCompileResult
 
 class TransformerManager @Inject constructor(
   private val commonTransformer: CommonTransformer,
@@ -34,7 +34,7 @@ class TransformerManager @Inject constructor(
     return this
   }
 
-  fun transform(result: RuntimeJarLoader.CompileJarResult): RuntimeJarLoader.CompileJarResult {
-    return result.copyWith(compiledClasses = result.compiledClasses.toMutableMap().transform())
+  fun transform(result: JavaCompileResult): JavaCompileResult {
+    return result.copy(compiledClasses = result.compiledClasses.toMutableMap().transform())
   }
 }

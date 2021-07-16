@@ -27,8 +27,8 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.slf4j.Logger
-import org.sourcegrade.jagr.core.Config
 import org.sourcegrade.jagr.core.testing.SubmissionInfoImpl
+import org.sourcegrade.jagr.launcher.opt.Config
 import java.io.File
 import java.nio.file.FileSystems
 import kotlin.io.path.ExperimentalPathApi

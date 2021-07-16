@@ -20,26 +20,30 @@
 package org.sourcegrade.jagr.core
 
 import com.google.inject.Inject
-import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
-import org.sourcegrade.jagr.api.testing.Submission
 import org.sourcegrade.jagr.core.compiler.java.CompiledClass
+import org.sourcegrade.jagr.core.compiler.java.JavaCompileResult
 import org.sourcegrade.jagr.core.compiler.java.RuntimeJarLoader
-import org.sourcegrade.jagr.core.executor.WaterfallExecutor
 import org.sourcegrade.jagr.core.export.rubric.GradedRubricExportManager
 import org.sourcegrade.jagr.core.export.submission.SubmissionExportManager
 import org.sourcegrade.jagr.core.extra.ExtrasManager
 import org.sourcegrade.jagr.core.testing.JavaSubmission
-import org.sourcegrade.jagr.core.testing.RuntimeGrader
-import org.sourcegrade.jagr.core.testing.TestJar
+import org.sourcegrade.jagr.core.testing.RuntimeGraderImpl
+import org.sourcegrade.jagr.core.testing.TestJarImpl
 import org.sourcegrade.jagr.core.transformer.TransformerManager
+import org.sourcegrade.jagr.launcher.io.TestJar
+import org.sourcegrade.jagr.launcher.io.createResourceContainer
+import org.sourcegrade.jagr.launcher.io.nameWithoutExtension
+import org.sourcegrade.jagr.launcher.opt.Config
 import java.io.File
+import java.util.jar.JarEntry
+import java.util.jar.JarOutputStream
 
 class JagrImpl @Inject constructor(
   private val config: Config,
   private val logger: Logger,
   private val runtimeJarLoader: RuntimeJarLoader,
-  private val runtimeGrader: RuntimeGrader,
+  private val runtimeGrader: RuntimeGraderImpl,
   private val extrasManager: ExtrasManager,
   private val transformerManager: TransformerManager,
   private val gradedRubricExportManager: GradedRubricExportManager,
@@ -49,14 +53,14 @@ class JagrImpl @Inject constructor(
   private fun loadTestJars(testJarsLocation: File, solutionsLocation: File): List<TestJar> {
     val solutionClasses = loadLibs(solutionsLocation)
     return testJarsLocation.listFiles { _, t -> t.endsWith(".jar") }!!.parallelMapNotNull {
-      with(transformerManager.transform(runtimeJarLoader.loadSourcesJar(it, solutionClasses))) {
+      with(transformerManager.transform(runtimeJarLoader.loadSourcesJar(createResourceContainer(it), solutionClasses))) {
         printMessages(
           logger,
-          { "Test jar ${file.name} has $warnings warnings and $errors errors!" },
-          { "Test jar ${file.name} has $warnings warnings!" },
+          { "Test jar ${resourceContainer.name} has $warnings warnings and $errors errors!" },
+          { "Test jar ${resourceContainer.name} has $warnings warnings!" },
         )
         logger.info("Loaded test jar ${it.name}")
-        TestJar(logger, it, compiledClasses, sourceFiles, solutionClasses).takeIf { errors == 0 }
+        TestJarImpl(logger, it, compiledClasses, sourceFiles, solutionClasses).takeIf { errors == 0 }
       }
     }
   }
@@ -65,7 +69,7 @@ class JagrImpl @Inject constructor(
     return libsLocation.listFiles { _, t -> t.endsWith(".jar") }!!
       .asSequence()
       .map {
-        val classStorage = runtimeJarLoader.loadCompiledJar(it)
+        val classStorage = runtimeJarLoader.loadCompiledJar(createResourceContainer(it))
         logger.info("Loaded lib jar ${it.name}")
         classStorage
       }
@@ -76,68 +80,41 @@ class JagrImpl @Inject constructor(
   private fun loadSubmissionJars(submissionJarsLocation: File, libsLocation: File): List<JavaSubmission> {
     val libsClasspath = loadLibs(libsLocation)
     return submissionJarsLocation.listFiles { _, t -> t.endsWith(".jar") }!!.parallelMapNotNull {
-      with(transformerManager.transform(runtimeJarLoader.loadSourcesJar(it, libsClasspath))) {
+      val transformed = with(runtimeJarLoader.loadSourcesJar(createResourceContainer(it), libsClasspath)) {
+        val original = runtimeJarLoader.loadSourcesJar(createResourceContainer(it), libsClasspath)
+        val transformed = transformerManager.transform(original)
+
+        @Suppress("BlockingMethodInNonBlockingContext")
+        fun JavaCompileResult.exportCompilationResult(suffix: String) {
+          val file = File("compilation/${resourceContainer.nameWithoutExtension}-$suffix.jar")
+          file.parentFile.ensure()
+          JarOutputStream(file.outputStream().buffered()).use { jar ->
+            for ((className, compiledClass) in compiledClasses) {
+              val entry = JarEntry("${className.replace(".", "/")}.class")
+              entry.time = System.currentTimeMillis()
+              jar.putNextEntry(entry)
+              jar.write(compiledClass.byteArray)
+              jar.closeEntry()
+            }
+          }
+        }
+        original.exportCompilationResult("original")
+        transformed.exportCompilationResult("transformed")
+        transformed
+      }
+      with(transformed) {
         if (submissionInfo == null) {
           logger.error("$it does not have a submission-info.json! Skipping...")
           return@parallelMapNotNull null
         }
         printMessages(
           logger,
-          { "Submission $submissionInfo(${file.name}) has $warnings warnings and $errors errors!" },
-          { "Submission $submissionInfo(${file.name}) has $warnings warnings!" },
+          { "Submission $submissionInfo(${resourceContainer.name}) has $warnings warnings and $errors errors!" },
+          { "Submission $submissionInfo(${resourceContainer.name}) has $warnings warnings!" },
         )
-        JavaSubmission(file, submissionInfo, this, compiledClasses, sourceFiles)
+        JavaSubmission(resourceContainer, submissionInfo, this, compiledClasses, sourceFiles)
           .apply { logger.info("Loaded submission jar $this") }
       }
-    }
-  }
-
-  fun run() {
-    ensureDirs()
-    extrasManager.runExtras()
-    val testJars = loadTestJars(File(config.dir.tests), File(config.dir.solutions))
-    val submissions = loadSubmissionJars(File(config.dir.submissions), File(config.dir.libs))
-    val rubricExportLocation = File(config.dir.rubrics)
-    gradedRubricExportManager.initialize(rubricExportLocation, testJars)
-    val submissionExportLocation = File(config.dir.submissionsExport)
-    submissionExportManager.initialize(submissionExportLocation, testJars)
-    submissions.forEach { submission ->
-      submissionExportManager.export(submission, submissionExportLocation, testJars)
-    }
-    submissionExportManager.finalize(submissionExportLocation, testJars)
-    val executor = with(config.grading) {
-      WaterfallExecutor(concurrentThreads, -1L, logger)
-    }
-    submissions.forEach { submission ->
-      executor.schedule(submission.info.toString()) {
-        handleSubmission(submission, testJars, rubricExportLocation)
-      }
-    }
-    runBlocking {
-      executor.execute()
-    }
-  }
-
-  private fun handleSubmission(submission: Submission, testJars: List<TestJar>, rubricExportLocation: File) {
-    val gradedRubrics = runtimeGrader.grade(testJars, submission)
-    if (gradedRubrics.isEmpty()) {
-      logger.warn("$submission :: No matching rubrics!")
-      return
-    }
-    for ((gradedRubric, exportFileName) in gradedRubrics) {
-      gradedRubricExportManager.export(gradedRubric, rubricExportLocation, exportFileName)
-    }
-  }
-
-  private fun ensureDirs() {
-    with(config.dir) {
-      File("logs").ensure(logger)
-      File(libs).ensure(logger)
-      File(rubrics).ensure(logger)
-      File(solutions).ensure(logger)
-      File(submissions).ensure(logger)
-      File(submissionsExport).ensure(logger)
-      File(tests).ensure(logger)
     }
   }
 }

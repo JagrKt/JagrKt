@@ -21,7 +21,7 @@ package org.sourcegrade.jagr.core.extra
 
 import com.google.inject.Inject
 import org.slf4j.Logger
-import org.sourcegrade.jagr.core.Config
+import org.sourcegrade.jagr.launcher.opt.Config
 
 class ExtrasManager @Inject constructor(
   private val config: Config,

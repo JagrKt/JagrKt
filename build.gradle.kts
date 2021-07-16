@@ -2,10 +2,26 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.sourcegrade.jagr.script.JagrPublishPlugin
 
 plugins {
+  application
   val kotlinVersion = "1.5.0"
   kotlin("jvm").version(kotlinVersion)
   kotlin("plugin.serialization").version(kotlinVersion)
   id("com.github.johnrengelman.shadow").version("7.0.0")
+}
+
+dependencies {
+  runtimeOnly(project("jagr-core"))
+  implementation(project("jagr-launcher"))
+}
+
+application {
+  mainClass.set("org.sourcegrade.jagr.launcher.MainKt")
+}
+
+tasks {
+  shadowJar {
+    archiveFileName.set("sourcegrade.jagr-${project.version}.jar")
+  }
 }
 
 allprojects {

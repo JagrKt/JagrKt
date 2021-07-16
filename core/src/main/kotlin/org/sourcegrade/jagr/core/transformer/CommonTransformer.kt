@@ -26,7 +26,7 @@ import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Label
 import org.objectweb.asm.MethodVisitor
 import org.objectweb.asm.Opcodes
-import org.sourcegrade.jagr.core.Config
+import org.sourcegrade.jagr.launcher.opt.Config
 
 class CommonTransformer @Inject constructor(
   private val config: Config,

@@ -30,7 +30,7 @@ import org.sourcegrade.jagr.api.testing.Submission
 import org.sourcegrade.jagr.core.ensure
 import org.sourcegrade.jagr.core.testing.JavaSubmission
 import org.sourcegrade.jagr.core.testing.SubmissionInfoImpl
-import org.sourcegrade.jagr.core.testing.TestJar
+import org.sourcegrade.jagr.core.testing.TestJarImpl
 import org.sourcegrade.jagr.core.usePrintWriterSafe
 import org.sourcegrade.jagr.core.writeStream
 import org.sourcegrade.jagr.core.writeTextSafe
@@ -90,7 +90,7 @@ class GradleSubmissionExporter @Inject constructor(
     writeGradleResource(classLoader, resource = "gradle-wrapper.properties", targetDir = "gradle/wrapper/")
   }
 
-  override fun initialize(directory: File, testJar: TestJar?) {
+  override fun initialize(directory: File, testJar: TestJarImpl?) {
     directory.writeSkeleton()
   }
 
@@ -103,11 +103,11 @@ class GradleSubmissionExporter @Inject constructor(
     }
   }
 
-  override fun finalize(directory: File, testJar: TestJar?) {
+  override fun finalize(directory: File, testJar: TestJarImpl?) {
     writeSettings(directory, testJar?.name)
   }
 
-  override fun export(submission: Submission, directory: File, testJar: TestJar?) {
+  override fun export(submission: Submission, directory: File, testJar: TestJarImpl?) {
     if (submission !is JavaSubmission) return
     val submissionName = submission.info.toString()
     val file = directory.resolve(submissionName).ensure(logger, false) ?: return

@@ -21,9 +21,9 @@ package org.sourcegrade.jagr.core.export.submission
 
 import org.sourcegrade.jagr.api.testing.Submission
 import org.sourcegrade.jagr.core.export.Exporter
-import org.sourcegrade.jagr.core.testing.TestJar
+import org.sourcegrade.jagr.core.testing.TestJarImpl
 import java.io.File
 
 interface SubmissionExporter : Exporter {
-  fun export(submission: Submission, directory: File, testJar: TestJar? = null)
+  fun export(submission: Submission, directory: File, testJar: TestJarImpl? = null)
 }

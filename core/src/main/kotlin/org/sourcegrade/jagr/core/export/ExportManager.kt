@@ -21,7 +21,7 @@ package org.sourcegrade.jagr.core.export
 
 import org.slf4j.Logger
 import org.sourcegrade.jagr.core.ensure
-import org.sourcegrade.jagr.core.testing.TestJar
+import org.sourcegrade.jagr.core.testing.TestJarImpl
 import java.io.File
 
 abstract class ExportManager<E : Exporter> {
@@ -29,7 +29,7 @@ abstract class ExportManager<E : Exporter> {
   protected abstract val logger: Logger
   protected abstract val exporters: Set<E>
 
-  fun initialize(directory: File, testJars: List<TestJar>) {
+  fun initialize(directory: File, testJars: List<TestJarImpl>) {
     for (exporter in exporters) {
       val exportDir = directory.resolve(exporter.name).ensure(logger) ?: continue
       exportDir.resolve("default").ensure(logger) ?: continue
@@ -41,7 +41,7 @@ abstract class ExportManager<E : Exporter> {
     }
   }
 
-  fun finalize(directory: File, testJars: List<TestJar>) {
+  fun finalize(directory: File, testJars: List<TestJarImpl>) {
     for (exporter in exporters) {
       val exportDir = directory.resolve(exporter.name)
       exporter.finalize(exportDir.resolve("default"))

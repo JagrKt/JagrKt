@@ -10,6 +10,7 @@ repositories {
 }
 dependencies {
   api(project(":jagr-grader-api"))
+  api(project(":jagr-launcher"))
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.4.3")
   val kotlinxSerializationVersion = "1.2.1"
   implementation("org.jetbrains.kotlinx:kotlinx-serialization-core:$kotlinxSerializationVersion")
