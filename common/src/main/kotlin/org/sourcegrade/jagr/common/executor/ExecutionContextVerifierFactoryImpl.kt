@@ -17,19 +17,10 @@
  *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package org.sourcegrade.jagr.common.transformer
+package org.sourcegrade.jagr.common.executor
 
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.ClassWriter
+import org.sourcegrade.jagr.api.executor.ExecutionContextVerifier
 
-interface Transformer {
-  val name: String
-  fun transform(reader: ClassReader, writer: ClassWriter)
-}
-
-fun Transformer.transform(byteArray: ByteArray): ByteArray {
-  val reader = ClassReader(byteArray)
-  val writer = ClassWriter(reader, 0)
-  transform(reader, writer)
-  return writer.toByteArray()
+class ExecutionContextVerifierFactoryImpl : ExecutionContextVerifier.Factory {
+  override fun ensureNotRecursive(): ExecutionContextVerifier = NotRecursiveExecutionContextVerifier
 }

@@ -17,13 +17,13 @@
  *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package org.sourcegrade.jagr.common.executor;
+package jagrinternal.instrumentation;
 
 import com.google.inject.Inject;
 import org.opentest4j.AssertionFailedError;
 import org.slf4j.Logger;
 import org.sourcegrade.jagr.common.Config;
-import org.sourcegrade.jagr.common.transformer.CommonTransformer;
+import org.sourcegrade.jagr.common.asm.CommonClassVisitor;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
@@ -32,13 +32,12 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Injected via ASM by {@link CommonTransformer}.
+ * Injected via ASM by {@link CommonClassVisitor}.
  *
  * @see #checkTimeout() for more information.
  */
 @SuppressWarnings("unused")
 public final class TimeoutHandler {
-
   private static final ThreadLocal<AtomicLong> LAST_TIMEOUT = ThreadLocal.withInitial(AtomicLong::new);
   private static final ThreadLocal<List<String>> TEST_CLASS_NAMES = ThreadLocal.withInitial(Collections::emptyList);
   private static final ThreadMXBean mxBean = ManagementFactory.getThreadMXBean();
@@ -48,14 +47,6 @@ public final class TimeoutHandler {
 
   @Inject
   private static Logger logger;
-
-  /**
-   * Nested class for lazy initialization.
-   */
-  private static final class Lazy {
-    private static final long INDIVIDUAL_TIMEOUT = config.getTransformers().getTimeout().getIndividualTimeout();
-    private static final long TOTAL_TIMEOUT = config.getTransformers().getTimeout().getTotalTimeout();
-  }
 
   public static void disableTimeout() {
     LAST_TIMEOUT.get().set(-1);
@@ -110,5 +101,13 @@ public final class TimeoutHandler {
       }
     }
     return "I don't know how you got here. But now that you're here... Let's play?";
+  }
+
+  /**
+   * Nested class for lazy initialization.
+   */
+  private static final class Lazy {
+    private static final long INDIVIDUAL_TIMEOUT = config.getTimeout().getIndividualTimeout();
+    private static final long TOTAL_TIMEOUT = config.getTimeout().getTotalTimeout();
   }
 }

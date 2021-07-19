@@ -32,7 +32,9 @@ class Config {
 
   val grading: Grading = Grading()
 
-  val transformers = Transformers()
+  val timeout = Timeout()
+
+  val instrumentations = Instrumentations()
 }
 
 @ConfigSerializable
@@ -73,38 +75,110 @@ class Extras {
 }
 
 @ConfigSerializable
-class Transformers {
+class Timeout {
 
-  abstract class Transformer {
-    val enabled = true
-  }
-
-  @ConfigSerializable
-  class TimeoutTransformer : Transformer() {
-    @Comment(
-      """
+  @Comment(
+    """
 The grading thread's maximum permitted elapsed userTime in milliseconds since the last timeout before an
 AssertionFailedError is thrown. If a thread's userTime satisfies
 (userTime - lastTimeout) > individualTimeout,
 the current userTime is stored for comparison later, and an AssertionFailedError is thrown to be caught by JUnit.
 """
-    )
-    val individualTimeout = 10_000L
+  )
+  val individualTimeout = 10_000L
 
-    @Comment(
-      """
+  @Comment(
+    """
 The grading thread's maximum permitted elapsed userTime in milliseconds (from thread start) before an
 AssertionFailedError is thrown. If a thread's userTime satisfies
 ((userTime - lastTimeout) > individualTimeout) && (userTime > totalTimeout),
 an AssertionFailedError is thrown to be caught by JUnit. Note that lastTimeout is not reset in this case, and all further
 invocations of checkTimeout() will result in an AssertionFailedError
 """
-    )
-    val totalTimeout = 150_000L
+  )
+  val totalTimeout = 150_000L
+}
+
+@ConfigSerializable
+class Instrumentations {
+
+  abstract class Instrumentation {
+    abstract val enabled: Boolean
   }
 
-  val timeout = TimeoutTransformer()
+  @ConfigSerializable
+  class TimeoutSourcecodeInstrumentation : Instrumentation() {
+    @Comment(
+      """
+        Toggle sourcecode instrumentation to check timeouts.
+      """
+    )
+    override val enabled = true
+  }
+
+  @ConfigSerializable
+  class TimeoutBytecodeInstrumentation : Instrumentation() {
+    @Comment(
+      """
+        Toggle bytecode instrumentation to check timeouts.
+      """
+    )
+    override val enabled = false
+  }
+
+  @ConfigSerializable
+  class NotRecursiveSourcecodeInstrumentation : Instrumentation() {
+    @Comment(
+      """
+        Toggle sourcecode instrumentation to ensure non-recursive behavior.
+      """
+    )
+    override val enabled = false
+  }
+
+  @ConfigSerializable
+  class NotRecursiveBytecodeInstrumentation : Instrumentation() {
+    @Comment(
+      """
+        Toggle bytecode instrumentation to ensure non-recursive behavior.
+      """
+    )
+    override val enabled = false
+  }
+
+  @ConfigSerializable
+  class NotIterativeSourcecodeInstrumentation : Instrumentation() {
+    @Comment(
+      """
+        Toggle sourcecode instrumentation to ensure non-iterative behavior.
+      """
+    )
+    override val enabled = false
+  }
+
+  @ConfigSerializable
+  class SystemExitRemoveInstrumentation : Instrumentation() {
+    @Comment(
+      """
+        Toggle bytecode instrumentation to remove System.exit() calls.
+      """
+    )
+    override val enabled = true
+  }
+
+  val timeoutSourcecode = TimeoutSourcecodeInstrumentation()
+
+  val timeoutBytecode = TimeoutBytecodeInstrumentation()
+
+  val notRecursiveSourcecode = NotRecursiveSourcecodeInstrumentation()
+
+  val notRecursiveBytecode = NotRecursiveBytecodeInstrumentation()
+
+  val notIterativeSourcecode = NotIterativeSourcecodeInstrumentation()
+
+  val systemExitRemoveBytecode = SystemExitRemoveInstrumentation()
 }
+
 
 @ConfigSerializable
 class Grading {

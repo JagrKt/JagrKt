@@ -20,6 +20,7 @@
 package org.sourcegrade.jagr.common.testing
 
 import com.google.inject.Inject
+import jagrinternal.instrumentation.TimeoutHandler
 import org.junit.platform.commons.JUnitException
 import org.junit.platform.engine.discovery.ClassSelector
 import org.junit.platform.engine.discovery.DiscoverySelectors
@@ -30,7 +31,6 @@ import org.slf4j.Logger
 import org.sourcegrade.jagr.api.testing.Submission
 import org.sourcegrade.jagr.api.testing.TestCycle
 import org.sourcegrade.jagr.common.compiler.java.RuntimeClassLoader
-import org.sourcegrade.jagr.common.executor.TimeoutHandler
 
 class JavaRuntimeTester @Inject constructor(
   private val logger: Logger,

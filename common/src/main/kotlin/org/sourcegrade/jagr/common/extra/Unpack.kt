@@ -43,7 +43,13 @@ abstract class Unpack : Extra {
   @OptIn(ExperimentalPathApi::class)
   private fun SubmissionInfoVerification.verify() {
     if (assignmentId == null && studentId == null && firstName == null && lastName == null) return
-    FileSystems.newFileSystem(file.toPath(), null as ClassLoader?).use { fs ->
+    logger.info(this.toString())
+    try {
+      FileSystems.newFileSystem(file.toPath(), null as ClassLoader?)
+    } catch (e: Exception) {
+      logger.warn("InVaLiD ZiP dEtEcTeD")
+      return
+    }.use { fs ->
       val submissionInfoPath = fs.getPath("submission-info.json")
       val replacedSubmissionInfo = try {
         submissionInfoPath.bufferedReader()
@@ -52,7 +58,7 @@ abstract class Unpack : Extra {
         null
       }?.use useReader@{ reader ->
         val submissionInfo = try {
-          Json.decodeFromString<SubmissionInfoImpl>(reader.readText())
+          Json { ignoreUnknownKeys = true }.decodeFromString<SubmissionInfoImpl>(reader.readText())
         } catch (e: SerializationException) {
           return@useReader null
         }

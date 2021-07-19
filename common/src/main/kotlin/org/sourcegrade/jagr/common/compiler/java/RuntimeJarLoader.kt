@@ -22,24 +22,33 @@ package org.sourcegrade.jagr.common.compiler.java
 import com.google.inject.Inject
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import org.sourcegrade.jagr.common.compiler.java.handles.SourceHandle
+import org.sourcegrade.jagr.common.testing.TestMeta
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Opcodes
 import org.slf4j.Logger
 import org.sourcegrade.jagr.api.testing.CompileResult
+import org.sourcegrade.jagr.common.Config
 import org.sourcegrade.jagr.common.compiler.readEncoded
 import org.sourcegrade.jagr.common.testing.SubmissionInfoImpl
+import spoon.Launcher
+import spoon.support.compiler.VirtualFile
 import java.io.File
 import java.nio.charset.StandardCharsets
-import java.util.Locale
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.*
 import java.util.jar.JarFile
 import javax.tools.Diagnostic
 import javax.tools.DiagnosticCollector
 import javax.tools.JavaFileObject
 import javax.tools.ToolProvider
+import kotlin.collections.ArrayList
 
 class RuntimeJarLoader @Inject constructor(
   private val logger: Logger,
+  private val config: Config,
 ) {
 
   fun loadCompiledJar(file: File): Map<String, CompiledClass> {
@@ -50,7 +59,8 @@ class RuntimeJarLoader @Inject constructor(
         entry.isDirectory -> continue
         entry.name.endsWith(".class") -> {
           val className = entry.name.replace('/', '.').substring(0, entry.name.length - 6)
-          classStorage[className] = CompiledClass.Existing(className, jarFile.getInputStream(entry).use { it.readBytes() })
+          classStorage[className] =
+            CompiledClass.Existing(className, jarFile.getInputStream(entry).use { it.readBytes() })
         }
         entry.name.endsWith("MANIFEST.MF") -> { // ignore
         }
@@ -61,15 +71,38 @@ class RuntimeJarLoader @Inject constructor(
   }
 
   fun loadSourcesJar(file: File, runtimeClassPath: Map<String, CompiledClass> = mapOf()): CompileJarResult {
-    val jarFile = JarFile(file)
+    val jarFile = try {
+      JarFile(file)
+    } catch (e: Exception) {
+      return CompileJarResult(file)
+    }
+    if (file.nameWithoutExtension == "." || file.nameWithoutExtension == "..") {
+      // Never let the students escape
+      return CompileJarResult(file)
+    }
     val sourceFiles: MutableMap<String, JavaSourceFile> = mutableMapOf()
     var submissionInfo: SubmissionInfoImpl? = null
+    var testMeta: TestMeta? = null
+    val instrumentationDir = Path.of("instrumentation", file.nameWithoutExtension)
     for (entry in jarFile.entries()) {
       when {
         entry.isDirectory -> continue
+        entry.name == "meta-meta.json" -> {
+          testMeta = try {
+            Json { ignoreUnknownKeys = true }.decodeFromString<TestMeta>(
+              jarFile.getInputStream(entry).bufferedReader().use { it.readText() })
+          } catch (e: Exception) {
+            logger.error("$file has invalid meta-meta.json", e)
+            return CompileJarResult(file)
+          }
+          testMeta?.run {
+            testMeta = copy(testClasses = testClasses.map { it.replace('\\', '/') })
+          }
+        }
         entry.name == "submission-info.json" -> {
           submissionInfo = try {
-            Json.decodeFromString<SubmissionInfoImpl>(jarFile.getInputStream(entry).bufferedReader().use { it.readText() })
+            Json { ignoreUnknownKeys = true }.decodeFromString<SubmissionInfoImpl>(
+              jarFile.getInputStream(entry).bufferedReader().use { it.readText() })
           } catch (e: Throwable) {
             logger.error("$file has invalid submission-info.json", e)
             return CompileJarResult(file)
@@ -78,7 +111,27 @@ class RuntimeJarLoader @Inject constructor(
         entry.name.endsWith(".java") -> {
           val className = entry.name.replace('/', '.').substring(0, entry.name.length - 5)
           val content = jarFile.getInputStream(entry).use { it.readEncoded() }
-          val sourceFile = JavaSourceFile(className, entry.name, content)
+
+          // Instrumentation
+          val sourceHandles = ArrayList<SourceHandle>()
+          Launcher().let {
+            it.environment.complianceLevel = 15
+            it.addInputResource(VirtualFile(content))
+            it.addProcessor(LoopProcessor(sourceHandles, config))
+            it.addProcessor(MethodProcessor(sourceHandles, config))
+            it.buildModel()
+            it.process()
+          }
+          sourceHandles.sortByDescending { it.position }
+          val sb = StringBuilder(content)
+          for (sourceHandle in sourceHandles) {
+            sourceHandle.process(sb)
+          }
+          val transformedContent = sb.toString()
+          val sourceFile = JavaSourceFile(className, entry.name, content, transformedContent)
+          val instrumentedCodeFile = instrumentationDir.resolve(entry.name)
+          instrumentedCodeFile.parent?.let { Files.createDirectories(it) }
+          Files.writeString(instrumentedCodeFile, transformedContent)
           sourceFiles[entry.name] = sourceFile
         }
         entry.name.endsWith("MANIFEST.MF") -> { // ignore
@@ -89,6 +142,11 @@ class RuntimeJarLoader @Inject constructor(
     if (sourceFiles.isEmpty()) {
       // no source files, skip compilation task
       return CompileJarResult(file, submissionInfo)
+    }
+    testMeta?.testClasses?.forEach { testClass ->
+      if (sourceFiles.remove(testClass) != null) {
+        logger.warn("$submissionInfo :: Removed test class $testClass")
+      }
     }
     val compiledClasses: MutableMap<String, CompiledClass> = mutableMapOf()
     val collector = DiagnosticCollector<JavaFileObject>()

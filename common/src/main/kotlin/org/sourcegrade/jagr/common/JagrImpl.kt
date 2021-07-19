@@ -22,7 +22,10 @@ package org.sourcegrade.jagr.common
 import com.google.inject.Inject
 import kotlinx.coroutines.runBlocking
 import org.slf4j.Logger
+import org.sourcegrade.jagr.api.rubric.GradedRubric
 import org.sourcegrade.jagr.api.testing.Submission
+import org.sourcegrade.jagr.common.asm.BytecodeSecurityException
+import org.sourcegrade.jagr.common.asm.TransformerManager
 import org.sourcegrade.jagr.common.compiler.java.CompiledClass
 import org.sourcegrade.jagr.common.compiler.java.RuntimeJarLoader
 import org.sourcegrade.jagr.common.executor.WaterfallExecutor
@@ -32,8 +35,8 @@ import org.sourcegrade.jagr.common.extra.ExtrasManager
 import org.sourcegrade.jagr.common.testing.JavaSubmission
 import org.sourcegrade.jagr.common.testing.RuntimeGrader
 import org.sourcegrade.jagr.common.testing.TestJar
-import org.sourcegrade.jagr.common.transformer.TransformerManager
 import java.io.File
+import java.util.concurrent.ConcurrentLinkedQueue
 
 class JagrImpl @Inject constructor(
   private val config: Config,
@@ -49,7 +52,7 @@ class JagrImpl @Inject constructor(
   private fun loadTestJars(testJarsLocation: File, solutionsLocation: File): List<TestJar> {
     val solutionClasses = loadLibs(solutionsLocation)
     return testJarsLocation.listFiles { _, t -> t.endsWith(".jar") }!!.parallelMapNotNull {
-      with(transformerManager.transform(runtimeJarLoader.loadSourcesJar(it, solutionClasses))) {
+      with(transformerManager.transformGrader(runtimeJarLoader.loadSourcesJar(it, solutionClasses))) {
         printMessages(
           logger,
           { "Test jar ${file.name} has $warnings warnings and $errors errors!" },
@@ -76,7 +79,13 @@ class JagrImpl @Inject constructor(
   private fun loadSubmissionJars(submissionJarsLocation: File, libsLocation: File): List<JavaSubmission> {
     val libsClasspath = loadLibs(libsLocation)
     return submissionJarsLocation.listFiles { _, t -> t.endsWith(".jar") }!!.parallelMapNotNull {
-      with(transformerManager.transform(runtimeJarLoader.loadSourcesJar(it, libsClasspath))) {
+      val compileJarResult = try {
+        transformerManager.transformSubmission(runtimeJarLoader.loadSourcesJar(it, libsClasspath))
+      } catch (e: BytecodeSecurityException) {
+        logger.error("$it failed to verify and must be manually graded!", e)
+        return@parallelMapNotNull null
+      }
+      with(compileJarResult) {
         if (submissionInfo == null) {
           logger.error("$it does not have a submission-info.json! Skipping...")
           return@parallelMapNotNull null
@@ -108,23 +117,64 @@ class JagrImpl @Inject constructor(
     val executor = with(config.grading) {
       WaterfallExecutor(concurrentThreads, -1L, logger)
     }
+    val allRubrics = ConcurrentLinkedQueue<GradedRubric>()
     submissions.forEach { submission ->
       executor.schedule(submission.info.toString()) {
-        handleSubmission(submission, testJars, rubricExportLocation)
+        handleSubmission(allRubrics, submission, testJars, rubricExportLocation)
       }
     }
     runBlocking {
       executor.execute()
     }
+    val histo = mutableMapOf<Int, Int>()
+    var correctPoints = 0
+    var incorrectPoints = 0
+    var maxPoints = 0
+    for (rubric in allRubrics) {
+      val prev = histo.computeIfAbsent(rubric.grade.correctPoints) { 0 }
+      histo[rubric.grade.correctPoints] = prev + 1
+      correctPoints += rubric.grade.correctPoints
+      incorrectPoints += rubric.grade.incorrectPoints
+      maxPoints += rubric.rubric.maxPoints
+    }
+    if (allRubrics.isNotEmpty()) {
+      logger.info(
+        "Result: Correct: $correctPoints, Incorrect: $incorrectPoints, Max: $maxPoints, Average: " +
+          "${correctPoints.toDouble() / allRubrics.size.toDouble()}, Rubrics: ${allRubrics.size}"
+      )
+      for ((points, count) in histo.toSortedMap()) {
+        StringBuilder().apply {
+          append("Points: ")
+          append(points.toString().padStart(length = 3))
+          append(" Nr: ")
+          append(count.toString().padStart(length = 3))
+          append(" |")
+          for (i in 0 until count) {
+            append('-')
+          }
+        }.also { println(it) }
+      }
+    } else {
+      logger.info(
+        "Zero rubrics"
+      )
+    }
+    println("Individual timeout: ${config.timeout.individualTimeout}")
   }
 
-  private fun handleSubmission(submission: Submission, testJars: List<TestJar>, rubricExportLocation: File) {
+  private fun handleSubmission(
+    allRubrics: MutableCollection<GradedRubric>,
+    submission: Submission,
+    testJars: List<TestJar>,
+    rubricExportLocation: File,
+  ) {
     val gradedRubrics = runtimeGrader.grade(testJars, submission)
     if (gradedRubrics.isEmpty()) {
       logger.warn("$submission :: No matching rubrics!")
       return
     }
     for ((gradedRubric, exportFileName) in gradedRubrics) {
+      allRubrics += gradedRubric
       gradedRubricExportManager.export(gradedRubric, rubricExportLocation, exportFileName)
     }
   }

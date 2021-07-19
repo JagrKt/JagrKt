@@ -18,6 +18,7 @@ dependencies {
   implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.14.0")
   implementation("org.fusesource.jansi:jansi:2.3.1")
   implementation("org.ow2.asm:asm:9.1")
+  implementation("fr.inria.gforge.spoon:spoon-core:9.0.0")
   implementation("com.github.albfernandez:juniversalchardet:2.4.0")
   val configurateVersion = "4.1.1"
   implementation("org.spongepowered:configurate-hocon:$configurateVersion")

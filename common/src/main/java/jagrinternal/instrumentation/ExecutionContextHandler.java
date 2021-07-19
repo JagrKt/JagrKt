@@ -17,24 +17,21 @@
  *     along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
 
-package org.sourcegrade.jagr.common.transformer
+package jagrinternal.instrumentation;
 
-import com.google.inject.Inject
-import org.sourcegrade.jagr.common.compiler.java.CompiledClass
-import org.sourcegrade.jagr.common.compiler.java.RuntimeJarLoader
+import com.google.inject.Inject;
+import org.sourcegrade.jagr.common.executor.ExecutionContextFactoryImpl;
+import org.sourcegrade.jagr.common.executor.StackTraceVerifier;
 
-class TransformerManager @Inject constructor(
-  private val commonTransformer: CommonTransformer,
-) {
+public final class ExecutionContextHandler {
 
-  private fun MutableMap<String, CompiledClass>.transform(): MutableMap<String, CompiledClass> {
-    for ((className, compiledClass) in this) {
-      this[className] = CompiledClass.Existing(className, commonTransformer.transform(compiledClass.byteArray))
+  @Inject
+  private static ExecutionContextFactoryImpl CONTEXTS;
+
+  public static void checkExecutionContext() {
+    final StackTraceElement[] callStack = Thread.currentThread().getStackTrace();
+    for (StackTraceVerifier verifier : CONTEXTS.getOrCreateStack()) {
+      verifier.verify(callStack);
     }
-    return this
-  }
-
-  fun transform(result: RuntimeJarLoader.CompileJarResult): RuntimeJarLoader.CompileJarResult {
-    return result.copyWith(compiledClasses = result.compiledClasses.toMutableMap().transform())
   }
 }
