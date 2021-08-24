@@ -1,4 +1,4 @@
-# JagrKt
+# Jagr
 
 **Java AutoGrader, implemented in Kotlin**
 
@@ -7,7 +7,7 @@
 This project's compiled, source and javadoc jars are hosted on [sonatype](https://s01.oss.sonatype.org).
 Releases are available from `mavenCentral()` and snapshots from the maven repository in the following code block.
 
-To depend on JagrKt in your project, use the following lines in your gradle build script:
+To depend on Jagr in your project, use the following lines in your gradle build script:
 
 **build.gradle (Groovy):**
 ```groovy
@@ -16,7 +16,7 @@ repositories {
   maven { url "https://s01.oss.sonatype.org/content/repositories/snapshots" } // only needed for snapshot versions
 }
 dependencies {
-  implementation("org.jagrkt:jagrkt-api:$version")
+  implementation("org.sourcegrade:jagr-grader-api:$version")
 }
 ```
 
@@ -27,7 +27,7 @@ repositories {
   maven("https://s01.oss.sonatype.org/content/repositories/snapshots") // only needed for snapshot versions
 }
 dependencies {
-  implementation("org.jagrkt:jagrkt-api:$version")
+  implementation("org.sourcegrade:jagr-grader-api:$version")
 }
 ```
 
@@ -95,16 +95,16 @@ public class H03_RubricProvider implements RubricProvider {
 
 The values of `@TestForSubmission` and `@RubricForSubmission` must match the assignmentId in the `submission-info.json` of the
 submission that you wish to grade with that test and rubric. See
-[submission-info.json](https://github.com/JagrKt/SubmissionTemplate/blob/master/src/main/resources/submission-info.json)
+[submission-info.json](https://github.com/SourceGrade/SubmissionTemplate/blob/master/src/main/resources/submission-info.json)
 for an example.
 
-## Running JagrKt
+## Running Jagr
 
-To run JagrKt, download and place the desired compiled release of JagrKt from
-[releases](https://github.com/JagrKt/JagrKt/releases) in a (preferably empty) directory. Then either run the following command
+To run Jagr, download and place the desired compiled release of Jagr from
+[releases](https://github.com/SourceGrade/Jagr/releases) in a (preferably empty) directory. Then either run the following command
 in a terminal of your choice (or write a batch/bash script that you can double-click)
 ```bash
-java -jar JagrKt-VERSION.jar
+java -jar Jagr-VERSION.jar
 ```
 
 The following directories should be created:
@@ -117,4 +117,4 @@ The following directories should be created:
 ```
 
 Place your grading jar (tests + rubric providers) in `./tests` and the submission(s) you want to test in `./submissions` and
-rerun JagrKt.
+rerun Jagr.

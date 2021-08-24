@@ -1,5 +1,5 @@
-import org.jagrkt.script.JagrKtPublishPlugin
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.sourcegrade.jagr.script.JagrPublishPlugin
 
 plugins {
   val kotlinVersion = "1.5.0"
@@ -9,7 +9,7 @@ plugins {
 }
 
 allprojects {
-  group = "org.jagrkt"
+  group = "org.sourcegrade"
   version = "0.1.0-SNAPSHOT"
 
   project.findProperty("buildNumber")
@@ -33,5 +33,5 @@ allprojects {
 }
 
 subprojects {
-  apply<JagrKtPublishPlugin>()
+  apply<JagrPublishPlugin>()
 }
