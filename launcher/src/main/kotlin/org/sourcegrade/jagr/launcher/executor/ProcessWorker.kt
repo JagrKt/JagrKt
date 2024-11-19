@@ -59,8 +59,27 @@ class ProcessWorker(
         status = WorkerStatus.READY
     }
 
+    /**
+     * Ensures that [process] has been initialized correctly.
+     *
+     * This should be only called once per process.
+     */
+    private fun checkBoot() {
+        // wait for child process to start
+        val line = process.inputReader(Charsets.UTF_8).readLine()
+        if (line != MARK_CHILD_BOOT) {
+            throw IllegalStateException(
+                "Child process did not start correctly:\n"
+                    + process.errorStream.reader().readText()
+            )
+        }
+        // TODO: ensure process.isAlive too?
+        // check(process.isAlive) { "Process has already terminated with exit-code ${process.exitValue()}" }
+    }
+
     override fun assignJob(job: GradingJob) {
         check(this.job == null) { "Worker already has a job!" }
+        checkBoot()
         status = WorkerStatus.RUNNING
         coroutineScope.launch {
             try {
@@ -141,5 +160,6 @@ class ProcessWorker(
     companion object {
         const val MARK_LOG_MESSAGE_BYTE = 2
         const val MARK_RESULT_BYTE = 7
+        const val MARK_CHILD_BOOT = "jagr-child-boot"
     }
 }
