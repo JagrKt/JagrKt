@@ -10,7 +10,9 @@ plugins {
 
 dependencies {
     apiProject(project, "jagr-grader-api")
-    api(libs.coroutines)
+    api(libs.coroutines) {
+        exclude("org.jetbrains", "annotations")
+    }
     implementation(kotlin("reflect"))
     implementation(libs.configurate.hocon)
     implementation(libs.configurate.kotlin)
