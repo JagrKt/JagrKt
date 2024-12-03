@@ -16,7 +16,7 @@ configurate-hocon = { module = "org.spongepowered:configurate-hocon", version.re
 configurate-kotlin = { module = "org.spongepowered:configurate-extra-kotlin", version.ref = "configurate" }
 coroutines = "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1"
 csv = "org.apache.commons:commons-csv:1.12.0"
-guice = "com.google.inject:guice:5.1.0"
+guice = "com.google.inject:guice:7.0.0"
 jansi = "org.fusesource.jansi:jansi:2.4.1"
 junit-core = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
