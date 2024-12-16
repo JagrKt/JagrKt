@@ -1,7 +1,7 @@
 [versions]
 asm = "9.7.1"
 configurate = "4.1.2"
-junit = "5.11.3"
+junit = "5.11.4"
 kotlin = "2.1.0"
 log4j = "2.24.2"
 
@@ -20,7 +20,7 @@ guice = "com.google.inject:guice:5.1.0"
 jansi = "org.fusesource.jansi:jansi:2.4.1"
 junit-core = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit" }
-junit-launcher = "org.junit.platform:junit-platform-launcher:1.11.3"
+junit-launcher = "org.junit.platform:junit-platform-launcher:1.11.4"
 juniversalchardet = "com.github.albfernandez:juniversalchardet:2.5.0"
 logging-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
 logging-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
