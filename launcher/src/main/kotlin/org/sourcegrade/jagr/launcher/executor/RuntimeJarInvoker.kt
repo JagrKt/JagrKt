@@ -1,7 +1,7 @@
 /*
  *   Jagr - SourceGrade.org
- *   Copyright (C) 2021-2022 Alexander Staeding
- *   Copyright (C) 2021-2022 Contributors
+ *   Copyright (C) 2021-2024 Alexander Städing
+ *   Copyright (C) 2021-2024 Contributors
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU Affero General Public License as published by
@@ -19,11 +19,13 @@
 
 package org.sourcegrade.jagr.launcher.executor
 
+import org.apache.logging.log4j.Logger
 import java.nio.file.Path
 import java.nio.file.Paths
 import kotlin.io.path.pathString
 
 class RuntimeJarInvoker(
+    private val logger: Logger,
     private val jagrLocation: Path = Paths.get(RuntimeJarInvoker::class.java.protectionDomain.codeSource.location.toURI()),
     private val jvmArgs: List<String> = emptyList(),
 ) : RuntimeInvoker {
@@ -37,5 +39,8 @@ class RuntimeJarInvoker(
         add("--child")
     }
 
-    override fun createRuntime(): Process = ProcessBuilder().command(commands).start()
+    override fun createRuntime(): Process {
+        logger.info("Starting process $commands")
+        return ProcessBuilder().command(commands).start()
+    }
 }

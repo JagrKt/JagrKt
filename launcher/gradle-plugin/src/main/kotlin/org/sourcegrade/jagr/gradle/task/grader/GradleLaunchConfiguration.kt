@@ -1,7 +1,7 @@
 /*
  *   Jagr - SourceGrade.org
- *   Copyright (C) 2021-2022 Alexander Staeding
- *   Copyright (C) 2021-2022 Contributors
+ *   Copyright (C) 2021-2024 Alexander Städing
+ *   Copyright (C) 2021-2024 Contributors
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU Affero General Public License as published by
@@ -37,5 +37,8 @@ internal class GradleLaunchConfiguration(
             "log4j2-console-only.xml",
         ).getLogger("jagr")
     }
-    override val runtimeInvoker: RuntimeInvoker = RuntimeJarInvoker(jagrJar, config.executor.jvmArgs)
+
+    override val runtimeInvokerFactory: RuntimeInvoker.Factory = RuntimeInvoker.Factory { jagr ->
+        RuntimeJarInvoker(jagr, jagrJar, config.executor.jvmArgs)
+    }
 }

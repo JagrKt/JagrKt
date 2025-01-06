@@ -1,7 +1,7 @@
 /*
  *   Jagr - SourceGrade.org
- *   Copyright (C) 2021-2022 Alexander Staeding
- *   Copyright (C) 2021-2022 Contributors
+ *   Copyright (C) 2021-2024 Alexander Städing
+ *   Copyright (C) 2021-2024 Contributors
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU Affero General Public License as published by
@@ -88,7 +88,7 @@ class CommonModule(private val configuration: LaunchConfiguration) : AbstractMod
         with(Multibinder.newSetBinder(binder(), RuntimeTester::class.java)) {
             addBinding().to(JavaRuntimeTester::class.java)
         }
-        bind(RuntimeInvoker::class.java).toInstance(configuration.runtimeInvoker)
+        bind(RuntimeInvoker::class.java).toInstance(configuration.runtimeInvokerFactory.create(configuration.logger))
         bind(SerializerFactory.Locator::class.java).to(SerializationFactoryLocatorImpl::class.java)
         bind(SubmissionExporter.Eclipse::class.java).to(EclipseSubmissionExporter::class.java)
         bind(SubmissionExporter.Gradle::class.java).to(GradleSubmissionExporter::class.java)

@@ -1,7 +1,7 @@
 /*
  *   Jagr - SourceGrade.org
- *   Copyright (C) 2021-2022 Alexander Staeding
- *   Copyright (C) 2021-2022 Contributors
+ *   Copyright (C) 2021-2024 Alexander Städing
+ *   Copyright (C) 2021-2024 Contributors
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU Affero General Public License as published by
@@ -30,6 +30,7 @@ import org.gradle.kotlin.dsl.getByType
 import org.gradle.kotlin.dsl.property
 import org.sourcegrade.jagr.launcher.env.Config
 import org.sourcegrade.jagr.launcher.env.Jagr
+import org.sourcegrade.jagr.launcher.env.copyExecutor
 import org.sourcegrade.jagr.launcher.env.copyTimeout
 import org.sourcegrade.jagr.launcher.env.copyTransformers
 
@@ -130,5 +131,14 @@ abstract class GraderConfiguration(
 
     fun disableTimeouts() = mutateConfig {
         copyTransformers { copyTimeout { copy(enabled = false) } }
+    }
+
+    fun enableDebug(port: Int = 5005) = mutateConfig {
+        copyExecutor {
+            copy(
+                jvmArgs = jvmArgs +
+                    "-agentlib:jdwp=transport=dt_socket,server=n,address=localhost:$port,suspend=y",
+            )
+        }
     }
 }

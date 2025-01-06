@@ -1,7 +1,7 @@
 /*
  *   Jagr - SourceGrade.org
- *   Copyright (C) 2021-2022 Alexander Staeding
- *   Copyright (C) 2021-2022 Contributors
+ *   Copyright (C) 2021-2024 Alexander Städing
+ *   Copyright (C) 2021-2024 Contributors
  *
  *     This program is free software: you can redistribute it and/or modify
  *     it under the terms of the GNU Affero General Public License as published by
@@ -30,7 +30,7 @@ import java.io.File
 interface LaunchConfiguration {
     val config: Config
     val logger: Logger
-    val runtimeInvoker: RuntimeInvoker
+    val runtimeInvokerFactory: RuntimeInvoker.Factory
 
     object Standard : LaunchConfiguration {
         override val config: Config by lazy {
@@ -57,6 +57,6 @@ interface LaunchConfiguration {
         override val logger: Logger by lazy {
             LogManager.getLogger("Jagr")
         }
-        override val runtimeInvoker: RuntimeInvoker = RuntimeJarInvoker()
+        override val runtimeInvokerFactory: RuntimeInvoker.Factory = RuntimeInvoker.Factory { jagr -> RuntimeJarInvoker(jagr) }
     }
 }
