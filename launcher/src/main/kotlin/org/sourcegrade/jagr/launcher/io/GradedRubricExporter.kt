@@ -26,4 +26,5 @@ interface GradedRubricExporter {
     interface CSV : GradedRubricExporter
     interface HTML : GradedRubricExporter
     interface Moodle : GradedRubricExporter
+    interface Lab : GradedRubricExporter
 }

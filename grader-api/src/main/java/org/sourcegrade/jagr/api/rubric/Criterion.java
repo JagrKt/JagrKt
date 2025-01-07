@@ -91,6 +91,13 @@ public interface Criterion extends Gradable<GradedCriterion>, CriterionHolder<Cr
     @Nullable Criterion getParentCriterion();
 
     /**
+     * The {@link Grader} that will be used to calculate the points for the criterion.
+     *
+     * @return The {@link Grader} to use for this {@link Criterion}
+     */
+    @Nullable Grader getGrader();
+
+    /**
      * The peers of this criterion.
      *
      * <p>

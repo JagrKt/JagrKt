@@ -32,8 +32,8 @@ import org.sourcegrade.jagr.core.rubric.message
 class TestAwareGraderImpl(
     private val graderPassed: Grader,
     private val graderFailed: Grader,
-    private val requirePass: Map<JUnitTestRef, String?>,
-    private val requireFail: Map<JUnitTestRef, String?>,
+    val requirePass: Map<JUnitTestRef, String?>,
+    val requireFail: Map<JUnitTestRef, String?>,
     private val commentIfFailed: String?,
 ) : Grader {
 

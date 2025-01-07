@@ -55,8 +55,10 @@ class StandardGrading(
     private val rubricsFile = File(config.dir.rubrics).ensure(jagr.logger)!!
     private val csvDir = checkNotNull(rubricsFile.resolve("csv").ensure(jagr.logger)) { "rubrics/csv directory" }
     private val moodleDir = checkNotNull(rubricsFile.resolve("moodle").ensure(jagr.logger)) { "rubrics/moodle directory" }
+    private val labDir = checkNotNull(rubricsFile.resolve("lab").ensure(jagr.logger)) { "rubrics/lab directory" }
     private val csvExporter = jagr.injector.getInstance(GradedRubricExporter.CSV::class.java)
     private val moodleExporter = jagr.injector.getInstance(GradedRubricExporter.Moodle::class.java)
+    private val labExporter = jagr.injector.getInstance(GradedRubricExporter.Lab::class.java)
 
     fun grade(noExport: Boolean, exportOnly: Boolean) = runBlocking {
         jagr.logger.info("Starting Jagr v${Jagr.version}")
@@ -123,6 +125,7 @@ class StandardGrading(
         for ((gradedRubric, _) in result.rubrics) {
             csvExporter.exportSafe(gradedRubric, csvDir)
             moodleExporter.exportSafe(gradedRubric, moodleDir)
+            labExporter.exportSafe(gradedRubric, labDir)
         }
     }
 

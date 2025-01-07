@@ -68,7 +68,7 @@ class JUnitTestRefFactoryImpl @Inject constructor(
             TestExecutionResult.aborted(NoOpFailedError())
     }
 
-    class Default(private val testSource: TestSource) : JUnitTestRef {
+    class Default(val testSource: TestSource) : JUnitTestRef {
         inner class TestNotFoundError : AssertionFailedError("Test result not found")
 
         override operator fun get(testResults: Map<TestIdentifier, TestExecutionResult>): TestExecutionResult {

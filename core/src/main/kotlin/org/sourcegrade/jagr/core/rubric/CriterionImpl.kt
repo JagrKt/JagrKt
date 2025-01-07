@@ -90,6 +90,7 @@ class CriterionImpl(
     override fun getParentCriterion(): Criterion? = parentCriterionKt
     override fun getPeers(): List<CriterionImpl> = peersKt
     override fun getChildCriteria(): List<CriterionImpl> = childCriteria
+    override fun getGrader(): Grader? = grader
     override fun grade(testCycle: TestCycle): GradedCriterion {
         val graderResult = GradeResult.clamped(
             grader?.grade(testCycle, this)

@@ -28,7 +28,7 @@ import org.sourcegrade.jagr.core.rubric.GradeResultImpl
 
 class DescendingPriorityGrader(
     private val logger: Logger,
-    private vararg val graders: Grader,
+    vararg val graders: Grader,
 ) : Grader {
 
     override fun grade(testCycle: TestCycle, criterion: Criterion): GradeResult {

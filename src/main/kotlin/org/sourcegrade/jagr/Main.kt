@@ -27,6 +27,7 @@ import com.github.ajalt.clikt.parameters.types.choice
 import org.sourcegrade.jagr.launcher.env.Environment
 import org.sourcegrade.jagr.launcher.env.Jagr
 import org.sourcegrade.jagr.launcher.env.logger
+import kotlin.system.exitProcess
 
 fun main(vararg args: String) {
     try {
@@ -35,6 +36,7 @@ fun main(vararg args: String) {
         Jagr.logger.error("A fatal error occurred", e)
         throw e
     }
+    exitProcess(0)
 }
 
 class MainCommand : CliktCommand() {
