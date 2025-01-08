@@ -24,7 +24,7 @@ junit-launcher = "org.junit.platform:junit-platform-launcher:1.11.3"
 juniversalchardet = "com.github.albfernandez:juniversalchardet:2.5.0"
 logging-api = { module = "org.apache.logging.log4j:log4j-api", version.ref = "log4j" }
 logging-core = { module = "org.apache.logging.log4j:log4j-core", version.ref = "log4j" }
-serialization = "org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3"
+serialization = "org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0"
 
 [bundles]
 junit = ["junit-core", "junit-engine", "junit-launcher"]
