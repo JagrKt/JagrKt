@@ -10,7 +10,7 @@ annotations = "org.jetbrains:annotations:26.0.1"
 apiguardian = "org.apiguardian:apiguardian-api:1.1.2"
 asm-core = { module = "org.ow2.asm:asm", version.ref = "asm" }
 asm-util = { module = "org.ow2.asm:asm-util", version.ref = "asm" }
-clikt = "com.github.ajalt.clikt:clikt:4.4.0"
+clikt = "com.github.ajalt.clikt:clikt:5.0.2"
 configurate-core = { module = "org.spongepowered:configurate-extra-kotlin", version.ref = "configurate" }
 configurate-hocon = { module = "org.spongepowered:configurate-hocon", version.ref = "configurate" }
 configurate-kotlin = { module = "org.spongepowered:configurate-extra-kotlin", version.ref = "configurate" }
